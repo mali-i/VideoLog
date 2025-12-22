@@ -130,14 +130,45 @@ app.whenReady().then(() => {
     const thumbPath = path.join(thumbnailsDir, `${hash}.jpg`);
 
     try {
+      // Check if cached thumbnail exists
       try {
         await fs.promises.access(thumbPath);
+        return net.fetch(url.pathToFileURL(thumbPath).toString());
       } catch {
-        const image = await nativeImage.createThumbnailFromPath(decodedPath, { width: 320, height: 180 });
-        const buffer = image.toJPEG(80);
-        await fs.promises.writeFile(thumbPath, buffer);
+        // Cache doesn't exist, need to generate
       }
-      return net.fetch(url.pathToFileURL(thumbPath).toString());
+
+      // Try to generate thumbnail using native method
+      try {
+        const image = await nativeImage.createThumbnailFromPath(decodedPath, { width: 320, height: 180 });
+        if (!image.isEmpty()) {
+          const buffer = image.toJPEG(80);
+          await fs.promises.writeFile(thumbPath, buffer);
+          return net.fetch(url.pathToFileURL(thumbPath).toString());
+        }
+      } catch (err) {
+        console.log('Native thumbnail generation failed, will use fallback:', err.message);
+      }
+
+      // Fallback: Return a placeholder image for webm and unsupported formats
+      const ext = path.extname(decodedPath).toLowerCase();
+      if (ext === '.webm') {
+        // For webm, create a simple placeholder with file name
+        const placeholderSvg = `<svg width="320" height="180" xmlns="http://www.w3.org/2000/svg">
+          <rect width="320" height="180" fill="#1a1a1a"/>
+          <text x="160" y="80" font-family="Arial" font-size="48" fill="#ffffff" text-anchor="middle">WebM</text>
+          <text x="160" y="110" font-family="Arial" font-size="14" fill="#888888" text-anchor="middle">${path.basename(decodedPath)}</text>
+        </svg>`;
+        
+        return new Response(placeholderSvg, {
+          headers: {
+            'Content-Type': 'image/svg+xml',
+          }
+        });
+      }
+
+      // Generic fallback
+      return new Response('Error generating thumbnail', { status: 500 });
     } catch (error) {
       console.error('Failed to generate thumbnail:', error);
       return new Response('Error generating thumbnail', { status: 500 });

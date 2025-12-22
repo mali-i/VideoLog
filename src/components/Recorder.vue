@@ -46,7 +46,25 @@ const startRecording = () => {
   }
 
   recordedChunks.value = [];
-  mediaRecorder.value = new MediaRecorder(stream.value, { mimeType: 'video/webm;codecs=vp9' });
+  
+  // Try to use MP4 format, fallback to WebM if not supported
+  let mimeType = 'video/webm;codecs=vp9';
+  let fileExtension = 'webm';
+  
+  if (MediaRecorder.isTypeSupported('video/mp4')) {
+    mimeType = 'video/mp4';
+    fileExtension = 'mp4';
+  } else if (MediaRecorder.isTypeSupported('video/mp4;codecs=avc1')) {
+    mimeType = 'video/mp4;codecs=avc1';
+    fileExtension = 'mp4';
+  } else if (MediaRecorder.isTypeSupported('video/webm;codecs=h264')) {
+    // Some systems support H.264 in WebM container
+    mimeType = 'video/webm;codecs=h264';
+    fileExtension = 'webm';
+  }
+  
+  console.log('Recording with mimeType:', mimeType);
+  mediaRecorder.value = new MediaRecorder(stream.value, { mimeType });
   
   mediaRecorder.value.ondataavailable = (event) => {
     if (event.data.size > 0) {
@@ -70,9 +88,9 @@ const startRecording = () => {
     isSaving.value = true;
     
     try {
-      const blob = new Blob(recordedChunks.value, { type: 'video/webm' });
+      const blob = new Blob(recordedChunks.value, { type: mimeType });
       const buffer = await blob.arrayBuffer();
-      const filename = `video_${dayjs().format('YYYY-MM-DD_HH-mm-ss')}.webm`;
+      const filename = `video_${dayjs().format('YYYY-MM-DD_HH-mm-ss')}.${fileExtension}`;
       
       const result = await window.electronAPI.saveVideo({
         buffer,
