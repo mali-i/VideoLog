@@ -26,6 +26,7 @@ const stream = ref(null);
 const mediaRecorder = ref(null);
 const isRecording = ref(false);
 const recordedChunks = ref([]);
+const isSaving = ref(false);
 
 const startCamera = async () => {
   try {
@@ -54,23 +55,42 @@ const startRecording = () => {
   };
 
   mediaRecorder.value.onstop = async () => {
-    const blob = new Blob(recordedChunks.value, { type: 'video/webm' });
-    const buffer = await blob.arrayBuffer();
-    const filename = `video_${dayjs().format('YYYY-MM-DD_HH-mm-ss')}.webm`;
-    
-    const result = await window.electronAPI.saveVideo({
-      buffer,
-      filename,
-      directory: props.saveDirectory
-    });
-    
-    if (result.success) {
-      // alert(`Video saved to ${result.filePath}`);
-      emit('video-saved');
-    } else {
-      alert(`Failed to save video: ${result.error}`);
+    if (isSaving.value) {
+      console.log('Already saving, skipping duplicate save');
+      return;
     }
-    isRecording.value = false;
+    
+    if (recordedChunks.value.length === 0) {
+      console.error('No recorded chunks available');
+      alert('Failed to save video: No data recorded');
+      isRecording.value = false;
+      return;
+    }
+
+    isSaving.value = true;
+    
+    try {
+      const blob = new Blob(recordedChunks.value, { type: 'video/webm' });
+      const buffer = await blob.arrayBuffer();
+      const filename = `video_${dayjs().format('YYYY-MM-DD_HH-mm-ss')}.webm`;
+      
+      const result = await window.electronAPI.saveVideo({
+        buffer,
+        filename,
+        directory: props.saveDirectory
+      });
+      
+      if (result.success) {
+        // alert(`Video saved to ${result.filePath}`);
+        emit('video-saved');
+      } else {
+        alert(`Failed to save video: ${result.error}`);
+      }
+    } finally {
+      recordedChunks.value = [];
+      isRecording.value = false;
+      isSaving.value = false;
+    }
   };
 
   mediaRecorder.value.start();
