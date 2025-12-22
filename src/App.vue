@@ -1,26 +1,50 @@
 <template>
-  <div class="app-container">
-    <header>
+  <div class="app-layout">
+    <aside class="sidebar">
       <div class="brand">
         <h1>📹 Video Log</h1>
       </div>
-      <div class="settings">
-        <div class="path-display" :title="saveDirectory">
-            <span class="label">Storage:</span>
-            <span class="value">{{ saveDirectory || 'Not selected' }}</span>
+      <nav class="nav-menu">
+        <button 
+          :class="['nav-item', { active: currentView === 'record' }]" 
+          @click="currentView = 'record'"
+        >
+          <span class="icon">🔴</span>
+          Record
+        </button>
+        <button 
+          :class="['nav-item', { active: currentView === 'gallery' }]" 
+          @click="currentView = 'gallery'"
+        >
+          <span class="icon">🖼️</span>
+          Gallery
+        </button>
+      </nav>
+    </aside>
+
+    <div class="main-wrapper">
+      <header class="top-bar">
+        <div class="view-title">
+          <h2>{{ currentView === 'record' ? 'New Recording' : 'Video Gallery' }}</h2>
         </div>
-        <button @click="selectDirectory" class="btn-secondary">Change Folder</button>
-      </div>
-    </header>
-    
-    <main>
-      <div class="recorder-section">
-        <Recorder :saveDirectory="saveDirectory" @video-saved="refreshGallery" />
-      </div>
-      <div class="gallery-section">
-        <VideoGallery ref="galleryRef" :directory="saveDirectory" />
-      </div>
-    </main>
+        <div class="settings">
+          <div class="path-display" :title="saveDirectory">
+              <span class="label">Storage:</span>
+              <span class="value">{{ saveDirectory || 'Not selected' }}</span>
+          </div>
+          <button @click="selectDirectory" class="btn-secondary">Change Folder</button>
+        </div>
+      </header>
+      
+      <main class="content-area">
+        <div v-if="currentView === 'record'" class="view-container">
+          <Recorder :saveDirectory="saveDirectory" @video-saved="onVideoSaved" />
+        </div>
+        <div v-if="currentView === 'gallery'" class="view-container">
+          <VideoGallery ref="galleryRef" :directory="saveDirectory" />
+        </div>
+      </main>
+    </div>
   </div>
 </template>
 
@@ -31,6 +55,7 @@ import VideoGallery from './components/VideoGallery.vue';
 
 const saveDirectory = ref('');
 const galleryRef = ref(null);
+const currentView = ref('record');
 
 const selectDirectory = async () => {
   const path = await window.electronAPI.selectDirectory();
@@ -38,6 +63,15 @@ const selectDirectory = async () => {
     saveDirectory.value = path;
     await window.electronAPI.setConfig('saveDirectory', path);
   }
+};
+
+const onVideoSaved = () => {
+    // Optional: Switch to gallery view after saving, or just notify
+    // currentView.value = 'gallery';
+    // If we are in gallery view (unlikely if we just recorded), refresh it
+    if (galleryRef.value) {
+        galleryRef.value.refresh();
+    }
 };
 
 const refreshGallery = () => {
@@ -55,34 +89,102 @@ onMounted(async () => {
 </script>
 
 <style>
+* {
+  box-sizing: border-box;
+}
+
 body {
     margin: 0;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     background-color: #f5f7fa;
     color: #2c3e50;
+    height: 100vh;
+    overflow: hidden;
 }
 
-.app-container {
-  max-width: 1200px;
-  margin: 0 auto;
+.app-layout {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+}
+
+.sidebar {
+  width: 250px;
+  background: #2c3e50;
+  color: white;
+  display: flex;
+  flex-direction: column;
   padding: 20px;
+  flex-shrink: 0;
 }
 
-header {
+.brand h1 {
+    margin: 0 0 40px 0;
+    font-size: 1.5rem;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.nav-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 15px;
+  background: transparent;
+  border: none;
+  color: #a0aec0;
+  text-align: left;
+  font-size: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.nav-item.active {
+  background: #42b983;
+  color: white;
+  font-weight: 600;
+}
+
+.nav-item .icon {
+  font-size: 1.2rem;
+}
+
+.main-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.top-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 30px;
   background: white;
-  padding: 15px 25px;
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  padding: 15px 30px;
+  border-bottom: 1px solid #eef2f7;
+  height: 70px;
+  box-sizing: border-box;
 }
 
-h1 {
-    margin: 0;
-    font-size: 1.5rem;
-    color: #333;
+.view-title h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #2c3e50;
 }
 
 .settings {
@@ -111,18 +213,15 @@ h1 {
     text-overflow: ellipsis;
 }
 
-button {
-    cursor: pointer;
-    border: none;
-    border-radius: 6px;
-    font-weight: 500;
-    transition: all 0.2s;
-}
-
 .btn-secondary {
     background-color: #eef2f7;
     color: #5b6b79;
     padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
 }
 
 .btn-secondary:hover {
@@ -130,15 +229,85 @@ button {
     color: #333;
 }
 
-.recorder-section {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    margin-bottom: 30px;
+.content-area {
+  flex: 1;
+  padding: 30px;
+  overflow-y: auto;
+  background-color: #f5f7fa;
 }
 
-.gallery-section {
-    /* Gallery has its own styling */
+.view-container {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .app-layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    height: auto;
+    flex-direction: row;
+    padding: 10px;
+    order: 2;
+    justify-content: space-around;
+  }
+
+  .brand {
+    display: none;
+  }
+
+  .nav-menu {
+    flex-direction: row;
+    width: 100%;
+    justify-content: space-around;
+    gap: 0;
+  }
+
+  .nav-item {
+    flex-direction: column;
+    padding: 8px;
+    font-size: 0.8rem;
+    gap: 4px;
+    border-radius: 8px;
+  }
+
+  .nav-item .icon {
+    font-size: 1.5rem;
+    margin-bottom: 2px;
+  }
+
+  .main-wrapper {
+    order: 1;
+    height: calc(100vh - 80px); /* Approximate height of bottom bar */
+  }
+
+  .top-bar {
+    padding: 10px 15px;
+    height: auto;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .settings {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .path-display {
+      text-align: left;
+  }
+  
+  .path-display .value {
+      max-width: 200px;
+  }
+
+  .content-area {
+    padding: 15px;
+  }
 }
 </style>

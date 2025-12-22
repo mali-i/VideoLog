@@ -147,4 +147,17 @@ video {
 .controls button:last-child {
     background-color: #e74c3c;
 }
+
+@media (max-width: 600px) {
+    .controls {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        gap: 10px;
+    }
+    
+    .controls button {
+        width: 100%;
+    }
+}
 </style>

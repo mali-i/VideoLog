@@ -81,6 +81,22 @@ defineExpose({ refresh: loadVideos });
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     gap: 20px;
 }
+
+@media (max-width: 600px) {
+    .video-grid {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 10px;
+    }
+    
+    .video-thumbnail {
+        height: 100px;
+    }
+    
+    .play-icon {
+        font-size: 24px;
+    }
+}
+
 .video-item {
     background: #fff;
     border: 1px solid #eee;
@@ -153,6 +169,24 @@ defineExpose({ refresh: loadVideos });
     overflow: hidden;
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
 }
+
+@media (max-width: 600px) {
+    .modal-content {
+        width: 95%;
+    }
+    
+    .modal-footer {
+        flex-direction: column;
+        gap: 10px;
+        align-items: stretch;
+        text-align: center;
+    }
+    
+    .close-btn {
+        width: 100%;
+    }
+}
+
 .modal-content video {
     width: 100%;
     max-height: 70vh;
