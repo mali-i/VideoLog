@@ -90,3 +90,37 @@ typings/
 
 # Electron-Forge
 out/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Thumbnails
+Thumbs.db
+ehthumbs.db
+
+# IDE / Editor
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# App-specific
+# User data directory (electron-store, thumbnails, etc.)
+# Only ignore if you don't want to version control user preferences
+# Uncomment the next line if needed:
+# userData/
+
+# Video storage directory (if in project)
+# videos/
+# video_logs/
