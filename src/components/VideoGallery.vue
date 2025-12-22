@@ -5,8 +5,7 @@
     <div class="video-grid">
       <div v-for="video in videos" :key="video.name" class="video-item" @click="playVideo(video)">
         <div class="video-thumbnail">
-            <!-- Using video tag as thumbnail for simplicity -->
-            <video :src="`media://${video.path}`" preload="metadata" muted></video>
+            <img :src="`thumbnail://${video.path}`" loading="lazy" alt="Video thumbnail" />
             <div class="play-icon">▶</div>
         </div>
         <div class="video-info">
@@ -118,7 +117,8 @@ defineExpose({ refresh: loadVideos });
     align-items: center;
     justify-content: center;
 }
-.video-thumbnail video {
+.video-thumbnail video,
+.video-thumbnail img {
     width: 100%;
     height: 100%;
     object-fit: cover;

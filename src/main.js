@@ -1,7 +1,8 @@
-import { app, BrowserWindow, ipcMain, dialog, protocol, net } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, protocol, net, nativeImage } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import url from 'node:url';
+import crypto from 'node:crypto';
 import Store from 'electron-store';
 import started from 'electron-squirrel-startup';
 
@@ -18,6 +19,14 @@ protocol.registerSchemesAsPrivileged([
       supportFetchAPI: true,
       bypassCSP: true,
       stream: true
+    }
+  },
+  {
+    scheme: 'thumbnail',
+    privileges: {
+      secure: true,
+      supportFetchAPI: true,
+      bypassCSP: true
     }
   }
 ]);
@@ -104,6 +113,33 @@ ipcMain.handle('video:list', async (event, directory) => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  const thumbnailsDir = path.join(app.getPath('userData'), 'thumbnails');
+  if (!fs.existsSync(thumbnailsDir)) {
+    fs.mkdirSync(thumbnailsDir, { recursive: true });
+  }
+
+  protocol.handle('thumbnail', async (request) => {
+    const filePath = request.url.slice('thumbnail://'.length);
+    const decodedPath = decodeURIComponent(filePath);
+    
+    const hash = crypto.createHash('md5').update(decodedPath).digest('hex');
+    const thumbPath = path.join(thumbnailsDir, `${hash}.jpg`);
+
+    try {
+      try {
+        await fs.promises.access(thumbPath);
+      } catch {
+        const image = await nativeImage.createThumbnailFromPath(decodedPath, { width: 320, height: 180 });
+        const buffer = image.toJPEG(80);
+        await fs.promises.writeFile(thumbPath, buffer);
+      }
+      return net.fetch(url.pathToFileURL(thumbPath).toString());
+    } catch (error) {
+      console.error('Failed to generate thumbnail:', error);
+      return new Response('Error generating thumbnail', { status: 500 });
+    }
+  });
+
   protocol.handle('media', (request) => {
     const filePath = request.url.slice('media://'.length);
     const decodedPath = decodeURIComponent(filePath);
