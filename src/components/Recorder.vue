@@ -3,10 +3,26 @@
     <div class="video-container">
       <video ref="videoPreview" autoplay muted></video>
       <div v-if="isRecording" class="recording-indicator">🔴 Recording</div>
+      <div v-if="statusMessage" class="status-message" :class="statusType">{{ statusMessage }}</div>
     </div>
     <div class="controls">
-      <button v-if="!isRecording" @click="startRecording" :disabled="!stream">Start Recording</button>
-      <button v-else @click="stopRecording">Stop Recording</button>
+      <button 
+        v-if="!isRecording" 
+        @click="startRecording" 
+        :disabled="!stream" 
+        class="btn-start"
+      >
+        <span class="btn-icon">🎥</span>
+        Start Recording
+      </button>
+      <button 
+        v-else 
+        @click="stopRecording" 
+        class="btn-stop"
+      >
+        <span class="btn-icon">⏹</span>
+        Stop Recording
+      </button>
     </div>
   </div>
 </template>
@@ -27,6 +43,18 @@ const mediaRecorder = ref(null);
 const isRecording = ref(false);
 const recordedChunks = ref([]);
 const isSaving = ref(false);
+const statusMessage = ref('');
+const statusType = ref('info');
+
+const showStatus = (message, type = 'info', duration = 3000) => {
+  statusMessage.value = message;
+  statusType.value = type;
+  if (duration > 0) {
+    setTimeout(() => {
+      statusMessage.value = '';
+    }, duration);
+  }
+};
 
 const startCamera = async () => {
   try {
@@ -99,10 +127,10 @@ const startRecording = () => {
       });
       
       if (result.success) {
-        // alert(`Video saved to ${result.filePath}`);
+        showStatus('Video saved successfully! ✅', 'success', 3000);
         emit('video-saved');
       } else {
-        alert(`Failed to save video: ${result.error}`);
+        showStatus(`Failed to save video: ${result.error}`, 'error', 5000);
       }
     } finally {
       recordedChunks.value = [];
@@ -113,10 +141,12 @@ const startRecording = () => {
 
   mediaRecorder.value.start();
   isRecording.value = true;
+  showStatus('Recording started! 🎬', 'success', 2000);
 };
 
 const stopRecording = () => {
   if (mediaRecorder.value && isRecording.value) {
+    showStatus('Processing video...', 'info', 0);
     mediaRecorder.value.stop();
   }
 };
@@ -166,24 +196,102 @@ video {
   font-weight: bold;
   animation: blink 1s infinite;
 }
+
 @keyframes blink {
   50% { opacity: 0.5; }
 }
-.controls button {
+
+.status-message {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
   padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  animation: slideUp 0.3s ease;
+  max-width: 90%;
+  text-align: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.status-message.info {
+  background: rgba(52, 152, 219, 0.9);
+  color: white;
+}
+
+.status-message.success {
+  background: rgba(46, 204, 113, 0.9);
+  color: white;
+}
+
+.status-message.error {
+  background: rgba(231, 76, 60, 0.9);
+  color: white;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+.controls button {
+  padding: 12px 24px;
   font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
-  background-color: #42b983;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
+
+.btn-start {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.btn-start:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-stop {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  animation: pulse 2s infinite;
+}
+
+.btn-stop:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(245, 87, 108, 0.3);
+  }
+  50% {
+    box-shadow: 0 2px 16px rgba(245, 87, 108, 0.6);
+  }
+}
+
 .controls button:disabled {
-  background-color: #ccc;
+  background: #ccc;
   cursor: not-allowed;
+  opacity: 0.6;
 }
-.controls button:last-child {
-    background-color: #e74c3c;
+
+.btn-icon {
+  font-size: 18px;
 }
 
 @media (max-width: 600px) {
