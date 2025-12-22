@@ -5,7 +5,12 @@
     <div class="video-grid">
       <div v-for="video in videos" :key="video.name" class="video-item" @click="playVideo(video)">
         <div class="video-thumbnail">
-            <img :src="`thumbnail://${video.path}`" loading="lazy" alt="Video thumbnail" />
+            <img 
+              :src="getThumbnailUrl(video.path)" 
+              loading="lazy" 
+              alt="Video thumbnail" 
+              @error="handleThumbnailError"
+            />
             <div class="play-icon">▶</div>
         </div>
         <div class="video-info">
@@ -17,7 +22,12 @@
     
     <div v-if="selectedVideo" class="video-modal" @click.self="closeModal">
         <div class="modal-content">
-            <video :src="`media://${selectedVideo.path}`" controls autoplay></video>
+            <video 
+              :src="getVideoUrl(selectedVideo.path)" 
+              controls 
+              autoplay
+              @error="handleVideoError"
+            ></video>
             <div class="modal-footer">
                 <span>{{ selectedVideo.name }}</span>
                 <button class="close-btn" @click="closeModal">Close</button>
@@ -50,12 +60,42 @@ const formatDate = (date) => {
   return dayjs(date).format('YYYY-MM-DD HH:mm:ss');
 };
 
+const getThumbnailUrl = (path) => {
+  // Use simple file:// protocol for thumbnails
+  const encoded = encodeURIComponent(path);
+  return `thumbnail://${encoded}`;
+};
+
+const getVideoUrl = (path) => {
+  // Convert to file:// URL for reliable playback
+  try {
+    const fileUrl = new URL(`file://${path}`);
+    return fileUrl.href;
+  } catch (e) {
+    console.error('Failed to create file URL:', e);
+    return '';
+  }
+};
+
 const playVideo = (video) => {
     selectedVideo.value = video;
 };
 
 const closeModal = () => {
     selectedVideo.value = null;
+};
+
+const handleThumbnailError = (e) => {
+    // Fallback to a generic video icon if thumbnail generation fails
+    e.target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0xMCA4djhsNi00LTYtNHptOS01SDVjLTEuMSAwLTIgLjktMiAydjE0YzAgMS4xLjkgMiAyIDJoMTRjMS4xIDAgMi0uOSAyLTJWNWMwLTEuMS0uOS0yLTItMnptMCAxNkg1VjVoMTR2MTR6Ii8+PC9zdmc+';
+    e.target.style.objectFit = 'scale-down';
+    e.target.style.padding = '20px';
+    e.target.style.backgroundColor = '#333';
+};
+
+const handleVideoError = (e) => {
+    console.error('Video playback error:', e.target.error, e.target.src);
+    alert(`Failed to play video. Error code: ${e.target.error ? e.target.error.code : 'unknown'}`);
 };
 
 watch(() => props.directory, loadVideos);

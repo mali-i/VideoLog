@@ -40,6 +40,7 @@ const createWindow = () => {
     height: 600,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
+      webSecurity: false, // Allow access to local files
     },
   });
 
@@ -119,8 +120,7 @@ app.whenReady().then(() => {
   }
 
   protocol.handle('thumbnail', async (request) => {
-    const filePath = request.url.slice('thumbnail://'.length);
-    const decodedPath = decodeURIComponent(filePath);
+    const decodedPath = decodeURIComponent(request.url.slice('thumbnail://'.length));
     
     const hash = crypto.createHash('md5').update(decodedPath).digest('hex');
     const thumbPath = path.join(thumbnailsDir, `${hash}.jpg`);
@@ -140,12 +140,7 @@ app.whenReady().then(() => {
     }
   });
 
-  protocol.handle('media', (request) => {
-    const filePath = request.url.slice('media://'.length);
-    const decodedPath = decodeURIComponent(filePath);
-    console.log('Media request:', request.url, '->', decodedPath);
-    return net.fetch(url.pathToFileURL(decodedPath).toString());
-  });
+
 
   createWindow();
 
