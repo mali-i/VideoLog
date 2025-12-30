@@ -19,13 +19,20 @@
           <span class="icon">🖼️</span>
           Gallery
         </button>
+        <button 
+          :class="['nav-item', { active: currentView === 'settings' }]" 
+          @click="currentView = 'settings'"
+        >
+          <span class="icon">⚙️</span>
+          Settings
+        </button>
       </nav>
     </aside>
 
     <div class="main-wrapper">
       <header class="top-bar">
         <div class="view-title">
-          <h2>{{ currentView === 'record' ? 'New Recording' : 'Video Gallery' }}</h2>
+          <h2>{{ viewTitle }}</h2>
         </div>
         <div class="settings">
           <div class="path-display" :title="saveDirectory">
@@ -43,19 +50,32 @@
         <div v-if="currentView === 'gallery'" class="view-container">
           <VideoGallery ref="galleryRef" :directory="saveDirectory" />
         </div>
+        <div v-if="currentView === 'settings'" class="view-container">
+          <Settings />
+        </div>
       </main>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import Recorder from './components/Recorder.vue';
 import VideoGallery from './components/VideoGallery.vue';
+import Settings from './components/Settings.vue';
 
 const saveDirectory = ref('');
 const galleryRef = ref(null);
 const currentView = ref('record');
+
+const viewTitle = computed(() => {
+  switch (currentView.value) {
+    case 'record': return 'New Recording';
+    case 'gallery': return 'Video Gallery';
+    case 'settings': return 'Settings';
+    default: return 'Video Log';
+  }
+});
 
 const selectDirectory = async () => {
   const path = await window.electronAPI.selectDirectory();

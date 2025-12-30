@@ -1,30 +1,5 @@
 <template>
   <div class="recorder">
-    <div class="device-selectors">
-      <div class="selector-group">
-        <label>📷 Camera:</label>
-        <select v-model="selectedVideoDeviceId" :disabled="isRecording">
-          <option v-for="device in videoDevices" :key="device.deviceId" :value="device.deviceId">
-            {{ device.label || `Camera ${videoDevices.indexOf(device) + 1}` }}
-          </option>
-        </select>
-      </div>
-      <div class="selector-group">
-        <label>🎤 Microphone:</label>
-        <select v-model="selectedAudioDeviceId" :disabled="isRecording">
-          <option v-for="device in audioDevices" :key="device.deviceId" :value="device.deviceId">
-            {{ device.label || `Microphone ${audioDevices.indexOf(device) + 1}` }}
-          </option>
-        </select>
-      </div>
-      <button 
-        class="btn-refresh" 
-        @click="getDevices" 
-        title="Refresh Device List"
-        :class="{ 'spinning': isRefreshingDevices }"
-      >🔄</button>
-    </div>
-
     <div class="video-container">
       <video ref="videoPreview" autoplay muted playsinline></video>
       <div v-if="isRecording" class="recording-indicator">🔴 Recording</div>
@@ -91,8 +66,6 @@ const statusMessage = ref('');
 const statusType = ref('info');
 
 // Devices
-const videoDevices = ref([]);
-const audioDevices = ref([]);
 const selectedVideoDeviceId = ref('');
 const selectedAudioDeviceId = ref('');
 
@@ -240,55 +213,15 @@ const charCount = computed(() => {
   return recognizedText.value.length;
 });
 
-const isRefreshingDevices = ref(false);
-
-const getDevices = async () => {
-  isRefreshingDevices.value = true;
-  try {
-    // Request permission first to get device labels
-    // We use a temporary stream to avoid conflict with the main stream
-    let tempStream = null;
-    if (!stream.value) {
-      try {
-        tempStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      } catch (e) {
-        console.warn("Could not get temp stream for permissions:", e);
-      }
-    }
-    
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    
-    // Stop the temp stream immediately
-    if (tempStream) {
-      tempStream.getTracks().forEach(track => track.stop());
-    }
-    
-    videoDevices.value = devices.filter(device => device.kind === 'videoinput');
-    audioDevices.value = devices.filter(device => device.kind === 'audioinput');
-    
-    // Set defaults if not set
-    if (!selectedVideoDeviceId.value && videoDevices.value.length > 0) {
-      selectedVideoDeviceId.value = videoDevices.value[0].deviceId;
-    }
-    
-    if (!selectedAudioDeviceId.value && audioDevices.value.length > 0) {
-      selectedAudioDeviceId.value = audioDevices.value[0].deviceId;
-    }
-
-    showStatus(`Devices updated: ${videoDevices.value.length} cameras found`, 'info', 2000);
-  } catch (err) {
-    console.error("Error getting devices:", err);
-    showStatus('Error refreshing devices', 'error');
-  } finally {
-    isRefreshingDevices.value = false;
-  }
-};
-
 const startCamera = async () => {
   try {
     if (stream.value) {
       stream.value.getTracks().forEach(track => track.stop());
     }
+
+    // Load settings from localStorage
+    selectedVideoDeviceId.value = localStorage.getItem('selectedVideoDeviceId') || '';
+    selectedAudioDeviceId.value = localStorage.getItem('selectedAudioDeviceId') || '';
 
     const constraints = {
       video: selectedVideoDeviceId.value ? { deviceId: { exact: selectedVideoDeviceId.value } } : true,
@@ -299,21 +232,11 @@ const startCamera = async () => {
     if (videoPreview.value) {
       videoPreview.value.srcObject = stream.value;
     }
-    
-    // If speech recognition was running, we might need to restart it with new stream
-    // But currently startSpeechRecognition is called on startRecording
   } catch (err) {
     console.error("Error accessing camera:", err);
     showStatus('Failed to access camera/microphone', 'error');
   }
 };
-
-// Watch for device changes
-watch([selectedVideoDeviceId, selectedAudioDeviceId], () => {
-  if (!isRecording.value) {
-    startCamera();
-  }
-});
 
 const startRecording = () => {
   if (!props.saveDirectory) {
@@ -406,20 +329,12 @@ const stopRecording = () => {
 };
 
 onMounted(async () => {
-  await getDevices();
-  navigator.mediaDevices.addEventListener('devicechange', getDevices);
-  
-  // If no device selected (watcher didn't fire), start camera with defaults immediately
-  if (!selectedVideoDeviceId.value && !selectedAudioDeviceId.value) {
-    await startCamera();
-  }
-
+  await startCamera();
   // Initialize Vosk on component mount (in background, don't block camera)
   initVosk();
 });
 
 onUnmounted(() => {
-  navigator.mediaDevices.removeEventListener('devicechange', getDevices);
   if (stream.value) {
     stream.value.getTracks().forEach(track => track.stop());
   }
