@@ -28,6 +28,10 @@
           title="Refresh Device List"
           :class="{ 'spinning': isRefreshingDevices }"
         >🔄 Refresh Devices</button>
+
+        <div v-if="statusMessage" class="status-message" :class="statusType">
+          {{ statusMessage }}
+        </div>
       </div>
       
       <div class="preview-area">
@@ -50,6 +54,18 @@ const selectedAudioDeviceId = ref('');
 const isRefreshingDevices = ref(false);
 const videoPreview = ref(null);
 const stream = ref(null);
+const statusMessage = ref('');
+const statusType = ref('');
+
+const showStatus = (message, type = 'info', duration = 3000) => {
+  statusMessage.value = message;
+  statusType.value = type;
+  if (duration > 0) {
+    setTimeout(() => {
+      statusMessage.value = '';
+    }, duration);
+  }
+};
 
 const getDevices = async () => {
   isRefreshingDevices.value = true;
@@ -90,8 +106,10 @@ const getDevices = async () => {
     }
     
     saveSettings();
+    showStatus(`Devices updated: ${videoDevices.value.length} cameras, ${audioDevices.value.length} microphones found`, 'success');
   } catch (err) {
     console.error("Error getting devices:", err);
+    showStatus('Error refreshing devices: ' + err.message, 'error');
   } finally {
     isRefreshingDevices.value = false;
   }
@@ -204,6 +222,32 @@ onUnmounted(() => {
 .btn-refresh.spinning {
   opacity: 0.7;
   pointer-events: none;
+}
+
+.status-message {
+  margin-top: 5px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  text-align: center;
+}
+
+.status-message.success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.status-message.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.status-message.info {
+  background-color: #cce5ff;
+  color: #004085;
+  border: 1px solid #b8daff;
 }
 
 .video-container {
