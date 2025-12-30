@@ -1,7 +1,32 @@
 <template>
   <div class="recorder">
+    <div class="device-selectors">
+      <div class="selector-group">
+        <label>📷 Camera:</label>
+        <select v-model="selectedVideoDeviceId" :disabled="isRecording">
+          <option v-for="device in videoDevices" :key="device.deviceId" :value="device.deviceId">
+            {{ device.label || `Camera ${videoDevices.indexOf(device) + 1}` }}
+          </option>
+        </select>
+      </div>
+      <div class="selector-group">
+        <label>🎤 Microphone:</label>
+        <select v-model="selectedAudioDeviceId" :disabled="isRecording">
+          <option v-for="device in audioDevices" :key="device.deviceId" :value="device.deviceId">
+            {{ device.label || `Microphone ${audioDevices.indexOf(device) + 1}` }}
+          </option>
+        </select>
+      </div>
+      <button 
+        class="btn-refresh" 
+        @click="getDevices" 
+        title="Refresh Device List"
+        :class="{ 'spinning': isRefreshingDevices }"
+      >🔄</button>
+    </div>
+
     <div class="video-container">
-      <video ref="videoPreview" autoplay muted></video>
+      <video ref="videoPreview" autoplay muted playsinline></video>
       <div v-if="isRecording" class="recording-indicator">🔴 Recording</div>
       <div v-if="statusMessage" class="status-message" :class="statusType">{{ statusMessage }}</div>
     </div>
@@ -46,7 +71,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import dayjs from 'dayjs';
 import { createModel } from 'vosk-browser';
 
@@ -64,6 +89,12 @@ const recordedChunks = ref([]);
 const isSaving = ref(false);
 const statusMessage = ref('');
 const statusType = ref('info');
+
+// Devices
+const videoDevices = ref([]);
+const audioDevices = ref([]);
+const selectedVideoDeviceId = ref('');
+const selectedAudioDeviceId = ref('');
 
 // Vosk Speech Recognition
 const recognizer = ref(null);
@@ -209,16 +240,80 @@ const charCount = computed(() => {
   return recognizedText.value.length;
 });
 
+const isRefreshingDevices = ref(false);
+
+const getDevices = async () => {
+  isRefreshingDevices.value = true;
+  try {
+    // Request permission first to get device labels
+    // We use a temporary stream to avoid conflict with the main stream
+    let tempStream = null;
+    if (!stream.value) {
+      try {
+        tempStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      } catch (e) {
+        console.warn("Could not get temp stream for permissions:", e);
+      }
+    }
+    
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    
+    // Stop the temp stream immediately
+    if (tempStream) {
+      tempStream.getTracks().forEach(track => track.stop());
+    }
+    
+    videoDevices.value = devices.filter(device => device.kind === 'videoinput');
+    audioDevices.value = devices.filter(device => device.kind === 'audioinput');
+    
+    // Set defaults if not set
+    if (!selectedVideoDeviceId.value && videoDevices.value.length > 0) {
+      selectedVideoDeviceId.value = videoDevices.value[0].deviceId;
+    }
+    
+    if (!selectedAudioDeviceId.value && audioDevices.value.length > 0) {
+      selectedAudioDeviceId.value = audioDevices.value[0].deviceId;
+    }
+
+    showStatus(`Devices updated: ${videoDevices.value.length} cameras found`, 'info', 2000);
+  } catch (err) {
+    console.error("Error getting devices:", err);
+    showStatus('Error refreshing devices', 'error');
+  } finally {
+    isRefreshingDevices.value = false;
+  }
+};
+
 const startCamera = async () => {
   try {
-    stream.value = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    if (stream.value) {
+      stream.value.getTracks().forEach(track => track.stop());
+    }
+
+    const constraints = {
+      video: selectedVideoDeviceId.value ? { deviceId: { exact: selectedVideoDeviceId.value } } : true,
+      audio: selectedAudioDeviceId.value ? { deviceId: { exact: selectedAudioDeviceId.value } } : true
+    };
+
+    stream.value = await navigator.mediaDevices.getUserMedia(constraints);
     if (videoPreview.value) {
       videoPreview.value.srcObject = stream.value;
     }
+    
+    // If speech recognition was running, we might need to restart it with new stream
+    // But currently startSpeechRecognition is called on startRecording
   } catch (err) {
     console.error("Error accessing camera:", err);
+    showStatus('Failed to access camera/microphone', 'error');
   }
 };
+
+// Watch for device changes
+watch([selectedVideoDeviceId, selectedAudioDeviceId], () => {
+  if (!isRecording.value) {
+    startCamera();
+  }
+});
 
 const startRecording = () => {
   if (!props.saveDirectory) {
@@ -311,12 +406,20 @@ const stopRecording = () => {
 };
 
 onMounted(async () => {
-  startCamera();
-  // Initialize Vosk on component mount
-  await initVosk();
+  await getDevices();
+  navigator.mediaDevices.addEventListener('devicechange', getDevices);
+  
+  // If no device selected (watcher didn't fire), start camera with defaults immediately
+  if (!selectedVideoDeviceId.value && !selectedAudioDeviceId.value) {
+    await startCamera();
+  }
+
+  // Initialize Vosk on component mount (in background, don't block camera)
+  initVosk();
 });
 
 onUnmounted(() => {
+  navigator.mediaDevices.removeEventListener('devicechange', getDevices);
   if (stream.value) {
     stream.value.getTracks().forEach(track => track.stop());
   }
@@ -334,6 +437,70 @@ onUnmounted(() => {
   gap: 1rem;
   width: 100%;
 }
+
+.device-selectors {
+  display: flex;
+  gap: 20px;
+  width: 100%;
+  max-width: 640px;
+  margin-bottom: 10px;
+}
+
+.selector-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.selector-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+}
+
+.selector-group select {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  background: white;
+  font-size: 14px;
+  outline: none;
+}
+
+.selector-group select:disabled {
+  background: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.btn-refresh {
+  align-self: flex-end;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-bottom: 2px;
+  font-size: 16px;
+  transition: background 0.2s;
+}
+
+.btn-refresh:hover {
+  background: #f0f0f0;
+}
+
+.btn-refresh.spinning {
+  animation: spin 1s linear infinite;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 .video-container {
   position: relative;
   width: 100%;
