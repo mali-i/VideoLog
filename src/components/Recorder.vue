@@ -34,11 +34,12 @@
         </div>
       </div>
       <div class="speech-content">
-        <div class="final-text" v-if="recognizedText">{{ recognizedText }}</div>
+        <textarea 
+          class="final-text-input" 
+          v-model="recognizedText" 
+          placeholder="Speak to see text here... (You can edit this text)"
+        ></textarea>
         <div class="interim-text" v-if="interimText">{{ interimText }}</div>
-        <div class="placeholder-text" v-if="!recognizedText && !interimText">
-          Speak to see text here...
-        </div>
       </div>
     </div>
   </div>
@@ -500,31 +501,41 @@ video {
 }
 
 .speech-content {
-  min-height: 80px;
-  max-height: 150px;
-  overflow-y: auto;
   background: #f9f9f9;
   border-radius: 6px;
   padding: 12px;
-  font-size: 14px;
-  line-height: 1.6;
+  border: 1px solid transparent;
+  transition: all 0.3s;
 }
 
-.final-text {
+.speech-content:focus-within {
+  background: #fff;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.final-text-input {
+  width: 100%;
+  min-height: 80px;
+  max-height: 200px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: vertical;
   color: #333;
-  margin-bottom: 8px;
+  outline: none;
+  display: block;
 }
 
 .interim-text {
+  margin-top: 8px;
   color: #666;
   font-style: italic;
-}
-
-.placeholder-text {
-  color: #999;
-  font-style: italic;
-  text-align: center;
-  margin-top: 20px;
+  font-size: 13px;
+  border-top: 1px dashed #eee;
+  padding-top: 4px;
 }
 
 @keyframes blink {
