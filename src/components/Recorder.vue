@@ -46,7 +46,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
+import { ref, onMounted, onUnmounted, onActivated, onDeactivated, computed, watch } from 'vue';
 import dayjs from 'dayjs';
 import { createModel } from 'vosk-browser';
 
@@ -328,16 +328,33 @@ const stopRecording = () => {
   }
 };
 
-onMounted(async () => {
-  await startCamera();
-  // Initialize Vosk on component mount (in background, don't block camera)
-  initVosk();
-});
-
-onUnmounted(() => {
+const stopCamera = () => {
   if (stream.value) {
     stream.value.getTracks().forEach(track => track.stop());
   }
+};
+
+onMounted(async () => {
+  // Initialize Vosk on component mount (in background, don't block camera)
+  // This will only run once if the component is kept alive
+  initVosk();
+  
+  // Start camera on initial mount
+  await startCamera();
+});
+
+onActivated(async () => {
+  // Restart camera when switching back to this tab
+  await startCamera();
+});
+
+onDeactivated(() => {
+  // Stop camera when switching away to save resources
+  stopCamera();
+});
+
+onUnmounted(() => {
+  stopCamera();
   
   // Clean up speech recognition
   stopSpeechRecognition();

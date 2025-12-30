@@ -44,9 +44,14 @@
       </header>
       
       <main class="content-area">
-        <div v-if="currentView === 'record'" class="view-container">
-          <Recorder :saveDirectory="saveDirectory" @video-saved="onVideoSaved" />
-        </div>
+        <KeepAlive>
+          <Recorder 
+            v-if="currentView === 'record'" 
+            class="view-container"
+            :saveDirectory="saveDirectory" 
+            @video-saved="onVideoSaved" 
+          />
+        </KeepAlive>
         <div v-if="currentView === 'gallery'" class="view-container">
           <VideoGallery ref="galleryRef" :directory="saveDirectory" />
         </div>
