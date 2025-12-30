@@ -86,8 +86,15 @@ const getDevices = async () => {
       tempStream.getTracks().forEach(track => track.stop());
     }
     
-    videoDevices.value = devices.filter(device => device.kind === 'videoinput');
-    audioDevices.value = devices.filter(device => device.kind === 'audioinput');
+    // Filter out 'default' devices to avoid duplicates (e.g. "Default - Microphone" vs "Microphone")
+    const allVideo = devices.filter(device => device.kind === 'videoinput');
+    const allAudio = devices.filter(device => device.kind === 'audioinput');
+    
+    videoDevices.value = allVideo.filter(d => d.deviceId !== 'default');
+    if (videoDevices.value.length === 0) videoDevices.value = allVideo;
+
+    audioDevices.value = allAudio.filter(d => d.deviceId !== 'default');
+    if (audioDevices.value.length === 0) audioDevices.value = allAudio;
     
     // Load saved settings or set defaults
     const savedVideo = localStorage.getItem('selectedVideoDeviceId');
