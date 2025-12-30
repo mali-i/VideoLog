@@ -16,6 +16,14 @@
         <div class="video-info">
           <div class="video-name" :title="video.name">{{ video.name }}</div>
           <div class="video-date">{{ formatDate(video.createdAt) }}</div>
+          <button 
+            class="btn-asr"
+            @click.stop="startASR(video)"
+            :disabled="asrProcessing"
+            title="Convert speech to text"
+          >
+            🎤 to 📝
+          </button>
         </div>
       </div>
     </div>
@@ -30,7 +38,19 @@
             ></video>
             <div class="modal-footer">
                 <span>{{ selectedVideo.name }}</span>
-                <button class="close-btn" @click="closeModal">Close</button>
+                <div class="modal-actions">
+                  <button v-if="!asrText" class="btn-transcribe" @click="transcribeModal" :disabled="asrProcessing">
+                    {{ asrProcessing ? 'Processing...' : '🎤 Transcribe' }}
+                  </button>
+                  <button class="close-btn" @click="closeModal">Close</button>
+                </div>
+            </div>
+            <div v-if="asrText" class="transcription-panel">
+              <div class="transcription-header">
+                <h3>Transcription</h3>
+                <button class="btn-copy" @click="copyTranscription">📋 Copy</button>
+              </div>
+              <div class="transcription-content">{{ asrText }}</div>
             </div>
         </div>
     </div>
@@ -47,6 +67,10 @@ const props = defineProps({
 
 const videos = ref([]);
 const selectedVideo = ref(null);
+const asrText = ref('');
+const asrProcessing = ref(false);
+const asrProgress = ref(0);
+const asrMessage = ref('');
 
 const loadVideos = async () => {
   if (props.directory) {
@@ -83,6 +107,9 @@ const playVideo = (video) => {
 
 const closeModal = () => {
     selectedVideo.value = null;
+    asrText.value = '';
+    asrProgress.value = 0;
+    asrMessage.value = '';
 };
 
 const handleThumbnailError = (e) => {
@@ -96,6 +123,53 @@ const handleThumbnailError = (e) => {
 const handleVideoError = (e) => {
     console.error('Video playback error:', e.target.error, e.target.src);
     alert(`Failed to play video. Error code: ${e.target.error ? e.target.error.code : 'unknown'}`);
+};
+
+const startASR = async (video) => {
+  selectedVideo.value = video;
+  await transcribeModal();
+};
+
+const transcribeModal = async () => {
+  if (!selectedVideo.value || asrProcessing.value) return;
+
+  asrProcessing.value = true;
+  asrProgress.value = 0;
+  asrMessage.value = '开始转文本...';
+
+  try {
+    // 注册进度监听
+    window.electronAPI?.asrOnProgress?.((data) => {
+      asrProgress.value = data.progress;
+      asrMessage.value = data.message;
+    });
+
+    const result = await window.electronAPI?.asrMediaToText?.(selectedVideo.value.path);
+    
+    if (result?.success) {
+      asrText.value = result.text;
+      asrMessage.value = '转文本完成';
+    } else {
+      alert(`Error: ${result?.error || '转文本失败'}`);
+      asrText.value = '';
+    }
+  } catch (error) {
+    console.error('ASR error:', error);
+    alert('转文本出错: ' + error.message);
+    asrText.value = '';
+  } finally {
+    asrProcessing.value = false;
+  }
+};
+
+const copyTranscription = async () => {
+  try {
+    await navigator.clipboard.writeText(asrText.value);
+    alert('已复制到剪贴板');
+  } catch (error) {
+    console.error('Copy error:', error);
+    alert('复制失败');
+  }
 };
 
 watch(() => props.directory, loadVideos);
@@ -184,6 +258,25 @@ defineExpose({ refresh: loadVideos });
 .video-date {
     font-size: 0.8em;
     color: #888;
+    margin-bottom: 8px;
+}
+.btn-asr {
+    width: 100%;
+    padding: 6px 8px;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: background 0.2s;
+}
+.btn-asr:hover:not(:disabled) {
+    background: #2980b9;
+}
+.btn-asr:disabled {
+    background: #bdc3c7;
+    cursor: not-allowed;
 }
 .video-modal {
     position: fixed;
@@ -239,6 +332,26 @@ defineExpose({ refresh: loadVideos });
     align-items: center;
     border-top: 1px solid #eee;
 }
+.modal-actions {
+    display: flex;
+    gap: 10px;
+}
+.btn-transcribe {
+    padding: 8px 16px;
+    background: #27ae60;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.btn-transcribe:hover:not(:disabled) {
+    background: #229954;
+}
+.btn-transcribe:disabled {
+    background: #bdc3c7;
+    cursor: not-allowed;
+}
 .close-btn {
     padding: 8px 16px;
     background: #e74c3c;
@@ -246,5 +359,44 @@ defineExpose({ refresh: loadVideos });
     border: none;
     border-radius: 4px;
     cursor: pointer;
+}
+.transcription-panel {
+    background: #f8f9fa;
+    border-top: 1px solid #ddd;
+    max-height: 300px;
+    overflow-y: auto;
+}
+.transcription-header {
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #ddd;
+}
+.transcription-header h3 {
+    margin: 0;
+    font-size: 1em;
+    color: #333;
+}
+.btn-copy {
+    padding: 6px 12px;
+    background: #9b59b6;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background 0.2s;
+}
+.btn-copy:hover {
+    background: #8e44ad;
+}
+.transcription-content {
+    padding: 20px;
+    line-height: 1.6;
+    color: #333;
+    font-size: 0.95em;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 </style>
