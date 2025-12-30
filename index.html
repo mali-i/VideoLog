@@ -2,7 +2,11 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>Hello World!</title>
+    <!-- Content Security Policy to allow local files and specific protocols -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: file: media: thumbnail: blob: https://alphacephei.com;">
+    <!-- 测试模型加载失败时的逻辑 -->
+    <!-- <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: file: media: thumbnail: "> -->
+    <title>Video Log</title>
 
   </head>
   <body>

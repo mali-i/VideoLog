@@ -175,7 +175,10 @@ app.whenReady().then(() => {
     }
   });
 
-
+  protocol.handle('media', (request) => {
+    const filePath = decodeURIComponent(request.url.slice('media://'.length));
+    return net.fetch(url.pathToFileURL(filePath).toString());
+  });
 
   createWindow();
 

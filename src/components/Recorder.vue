@@ -94,13 +94,43 @@ const initVosk = async () => {
     if (model.value) return true;
     
     console.log('Initializing Vosk...');
-    showStatus('Loading speech model...', 'info', 0);
+    showStatus('Connecting to model server...', 'info', 0);
     
     // Initialize Vosk with Chinese model
-    // Using a small Chinese model
     const modelUrl = 'https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip';
     
-    model.value = await createModel(modelUrl);
+    // Manually fetch to show progress
+    const response = await fetch(modelUrl);
+    if (!response.ok) throw new Error(`Failed to download model: ${response.statusText}`);
+    
+    const contentLength = response.headers.get('content-length');
+    const total = contentLength ? parseInt(contentLength, 10) : 0;
+    let loaded = 0;
+    
+    const reader = response.body.getReader();
+    const chunks = [];
+    
+    while(true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      
+      chunks.push(value);
+      loaded += value.length;
+      
+      if (total) {
+        const progress = Math.round((loaded / total) * 100);
+        showStatus(`Downloading speech model: ${progress}%`, 'info', 0);
+      } else {
+        showStatus(`Downloading speech model: ${(loaded / 1024 / 1024).toFixed(1)} MB`, 'info', 0);
+      }
+    }
+    
+    showStatus('Unpacking model...', 'info', 0);
+    const blob = new Blob(chunks);
+    const blobUrl = URL.createObjectURL(blob);
+    
+    model.value = await createModel(blobUrl);
+    URL.revokeObjectURL(blobUrl); // Clean up
     
     // Create recognizer
     const sampleRate = 16000; // Vosk prefers 16kHz
@@ -128,7 +158,7 @@ const initVosk = async () => {
     return true;
   } catch (err) {
     console.error('Failed to initialize Vosk:', err);
-    showStatus('Failed to initialize voice recognition', 'error', 3000);
+    showStatus('Failed to load speech model. Check internet connection.', 'error', 5000);
     return false;
   }
 };
