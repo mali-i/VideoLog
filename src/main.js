@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, protocol, net, nativeImage } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, protocol, net, nativeImage, systemPreferences } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import url from 'node:url';
@@ -117,7 +117,20 @@ ipcMain.handle('video:list', async (event, directory) => {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Request camera and microphone permissions on macOS
+  if (process.platform === 'darwin') {
+    // 延迟一点点请求权限，确保窗口或进程完全准备好
+    setTimeout(async () => {
+      try {
+        await systemPreferences.askForMediaAccess('camera');
+        await systemPreferences.askForMediaAccess('microphone');
+      } catch (err) {
+        console.error('Failed to request media access:', err);
+      }
+    }, 1000);
+  }
+
   const thumbnailsDir = path.join(app.getPath('userData'), 'thumbnails');
   if (!fs.existsSync(thumbnailsDir)) {
     fs.mkdirSync(thumbnailsDir, { recursive: true });

@@ -4,6 +4,15 @@ const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 module.exports = {
   packagerConfig: {
     asar: true,
+    executableName: 'video-log',
+    appBundleId: 'com.mali.videolog',
+    extendInfo: {
+      NSCameraUsageDescription: 'Application needs access to the camera for video recording.',
+      NSMicrophoneUsageDescription: 'Application needs access to the microphone for audio recording.',
+    },
+    osxSign: {
+      identity: '-',
+    },
   },
   rebuildConfig: {},
   makers: [
@@ -55,16 +64,5 @@ module.exports = {
         ],
       },
     },
-    // Fuses are used to enable/disable various Electron functionality
-    // at package time, before code signing the application
-    new FusesPlugin({
-      version: FuseVersion.V1,
-      [FuseV1Options.RunAsNode]: false,
-      [FuseV1Options.EnableCookieEncryption]: true,
-      [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
-      [FuseV1Options.EnableNodeCliInspectArguments]: false,
-      [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
-      [FuseV1Options.OnlyLoadAppFromAsar]: true,
-    }),
   ],
 };
