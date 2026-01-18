@@ -125,3 +125,6 @@ ehthumbs.db
 # Video storage directory (if in project)
 # videos/
 # video_logs/
+
+
+.llm-chat-history/*
