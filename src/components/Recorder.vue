@@ -1,10 +1,16 @@
 <template>
   <div class="recorder">
-    <div class="video-container">
-      <video ref="videoPreview" autoplay muted playsinline></video>
-      <div v-if="isRecording" class="recording-indicator">🔴 Recording</div>
-      <div v-if="statusMessage" class="status-message" :class="statusType">{{ statusMessage }}</div>
+    <div class="main-layout">
+      <div class="video-container">
+        <video ref="videoPreview" autoplay muted playsinline></video>
+        <div v-if="isRecording" class="recording-indicator">🔴 Recording</div>
+        <div v-if="statusMessage" class="status-message" :class="statusType">{{ statusMessage }}</div>
+      </div>
+      
+      <!-- Outline Panel -->
+      <OutlinePanel />
     </div>
+
     <div class="controls">
       <button 
         v-if="!isRecording" 
@@ -24,7 +30,7 @@
         Stop Recording
       </button>
     </div>
-    
+
     <!-- Speech Recognition Display -->
     <div class="speech-recognition-panel">
       <div class="speech-header">
@@ -49,6 +55,7 @@
 import { ref, onMounted, onUnmounted, onActivated, onDeactivated, computed, watch } from 'vue';
 import dayjs from 'dayjs';
 import { createModel } from 'vosk-browser';
+import OutlinePanel from './OutlinePanel.vue';
 
 const props = defineProps({
   saveDirectory: String
@@ -396,8 +403,20 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  gap: 1.5rem;
   width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.main-layout {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch; /* Stretch children to have same height */
+  gap: 20px;
+  width: 100%;
+  justify-content: center;
+  flex-wrap: nowrap;
 }
 
 .device-selectors {
@@ -465,7 +484,8 @@ onUnmounted(() => {
 
 .video-container {
   position: relative;
-  width: 100%;
+  flex: 1;
+  min-width: 0; /* Allow shrinking below content size */
   max-width: 640px;
   background: #000;
   border-radius: 8px;
