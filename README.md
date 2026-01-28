@@ -31,7 +31,7 @@ npm install
 ### 启动开发环境
 
 ```bash
-npm start
+npm run start
 ```
 
 ### 打包构建
@@ -39,7 +39,3 @@ npm start
 ```bash
 npm run make
 ```
-
-## 📄 License
-
-MIT
