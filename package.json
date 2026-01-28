@@ -1,6 +1,6 @@
 {
-  "name": "video_log",
-  "productName": "video_log",
+  "name": "mirrospeak",
+  "productName": "MirroSpeak",
   "version": "1.0.0",
   "description": "My Electron application description",
   "main": ".vite/build/main.js",

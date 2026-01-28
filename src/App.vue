@@ -2,7 +2,7 @@
   <div class="app-layout">
     <aside class="sidebar">
       <div class="brand">
-        <h1>📹 Video Log</h1>
+        <h1>🎙️ MirroSpeak</h1>
       </div>
       <nav class="nav-menu">
         <button 
@@ -78,7 +78,7 @@ const viewTitle = computed(() => {
     case 'record': return 'New Recording';
     case 'gallery': return 'Video Gallery';
     case 'settings': return 'Settings';
-    default: return 'Video Log';
+    default: return 'MirroSpeak';
   }
 });
 
