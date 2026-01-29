@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, protocol, net, nativeImage, systemPreferences } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, protocol, net, nativeImage, systemPreferences, session } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import url from 'node:url';
@@ -116,22 +116,22 @@ ipcMain.handle('video:list', async (event, directory) => {
   }
 });
 
-ipcMain.handle('vosk:fetch-model', async (event, url) => {
-  try {
-    const response = await net.fetch(url);
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const arrayBuffer = await response.arrayBuffer();
-    return arrayBuffer;
-  } catch (error) {
-    console.error('Failed to fetch Vosk model:', error);
-    throw error;
-  }
-});
-
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(async () => {
+  // 工业级 CORS 解决方案：拦截并修改响应头
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Access-Control-Allow-Origin': ['*'],
+        'Access-Control-Allow-Methods': ['GET, POST, OPTIONS, PUT, PATCH, DELETE'],
+        'Access-Control-Allow-Headers': ['X-Requested-With, content-type, Authorization'],
+      }
+    });
+  });
+
   // Request camera and microphone permissions on macOS
   if (process.platform === 'darwin') {
     // 延迟一点点请求权限，确保窗口或进程完全准备好

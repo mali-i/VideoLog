@@ -30,31 +30,12 @@
         Stop Recording
       </button>
     </div>
-
-    <!-- Speech Recognition Display -->
-    <div class="speech-recognition-panel">
-      <div class="speech-header">
-        <h3>Real-time Speech Recognition</h3>
-        <div class="speech-status" :class="{ 'listening': isListening }">
-          {{ isListening ? 'Listening...' : 'Standby' }}
-        </div>
-      </div>
-      <div class="speech-content">
-        <textarea 
-          class="final-text-input" 
-          v-model="recognizedText" 
-          placeholder="Speak to see text here... (You can edit this text)"
-        ></textarea>
-        <div class="interim-text" v-if="interimText">{{ interimText }}</div>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted, onActivated, onDeactivated, computed, watch } from 'vue';
 import dayjs from 'dayjs';
-import { createModel } from 'vosk-browser';
 // import OutlinePanel from './OutlinePanel.vue';
 
 const props = defineProps({
@@ -76,16 +57,6 @@ const statusType = ref('info');
 const selectedVideoDeviceId = ref('');
 const selectedAudioDeviceId = ref('');
 
-// Vosk Speech Recognition
-const recognizer = ref(null);
-const model = ref(null);
-const isListening = ref(false);
-const recognizedText = ref('');
-const interimText = ref('');
-const audioContext = ref(null);
-const mediaSource = ref(null);
-const processor = ref(null);
-
 const showStatus = (message, type = 'info', duration = 3000) => {
   statusMessage.value = message;
   statusType.value = type;
@@ -95,138 +66,6 @@ const showStatus = (message, type = 'info', duration = 3000) => {
     }, duration);
   }
 };
-
-const initVosk = async () => {
-  try {
-    if (model.value) return true;
-    
-    console.log('Initializing Vosk...');
-    showStatus('Connecting to model server...', 'info', 0);
-    
-    // Initialize Vosk with Chinese model
-    const modelUrl = 'https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip';
-    
-    // Use IPC to fetch the model to bypass CORS restrictions when webSecurity is enabled
-    showStatus('Downloading speech model...', 'info', 0);
-    const buffer = await window.electronAPI.fetchVoskModel(modelUrl);
-    
-    showStatus('Unpacking model...', 'info', 0);
-    const blob = new Blob([buffer], { type: 'application/zip' });
-    const blobUrl = URL.createObjectURL(blob);
-    
-    model.value = await createModel(blobUrl);
-    URL.revokeObjectURL(blobUrl); // Clean up
-    
-    // Create recognizer
-    const sampleRate = 16000; // Vosk prefers 16kHz
-    recognizer.value = new model.value.KaldiRecognizer(sampleRate);
-    
-    recognizer.value.on("result", (message) => {
-      const text = message.result.text;
-      if (text && text.trim()) {
-        recognizedText.value = (recognizedText.value + ' ' + text).trim();
-        interimText.value = '';
-      }
-    });
-
-    recognizer.value.on("partialresult", (message) => {
-      const text = message.result.partial;
-      if (text) {
-        interimText.value = text;
-      }
-    });
-    
-    console.log('Vosk initialized successfully');
-    showStatus('Voice recognition ready', 'success', 2000);
-    
-    isListening.value = false;
-    return true;
-  } catch (err) {
-    console.error('Failed to initialize Vosk:', err);
-    showStatus('Failed to load speech model. Check internet connection.', 'error', 5000);
-    return false;
-  }
-};
-
-const startSpeechRecognition = async () => {
-  if (!stream.value) {
-    console.log('No audio stream available');
-    return;
-  }
-
-  try {
-    const initialized = await initVosk();
-    if (!initialized) return;
-
-    // Set up audio processing
-    if (!audioContext.value) {
-      audioContext.value = new (window.AudioContext || window.webkitAudioContext)({
-        sampleRate: 16000, // Force 16kHz if possible
-      });
-    }
-
-    if (audioContext.value.state === 'suspended') {
-      await audioContext.value.resume();
-    }
-
-    const source = audioContext.value.createMediaStreamSource(stream.value);
-    mediaSource.value = source;
-
-    // Use ScriptProcessor for audio capture (deprecated but works widely)
-    // Buffer size 4096 provides good balance
-    const bufferSize = 4096;
-    const scriptProcessor = audioContext.value.createScriptProcessor(bufferSize, 1, 1);
-    processor.value = scriptProcessor;
-    
-    scriptProcessor.onaudioprocess = (event) => {
-      if (!isRecording.value) return;
-      
-      const inputData = event.inputBuffer.getChannelData(0);
-      
-      if (recognizer.value) {
-        try {
-          // Send float data directly to Vosk
-          recognizer.value.acceptWaveformFloat(inputData, audioContext.value.sampleRate);
-        } catch (err) {
-          console.error('Error processing audio:', err);
-        }
-      }
-    };
-
-    source.connect(scriptProcessor);
-    scriptProcessor.connect(audioContext.value.destination);
-    
-    recognizedText.value = '';
-    interimText.value = '';
-    isListening.value = true;
-    
-    console.log('Speech recognition started');
-  } catch (err) {
-    console.error('Failed to start speech recognition:', err);
-    showStatus('Failed to start voice recognition', 'error', 3000);
-  }
-};
-
-const stopSpeechRecognition = () => {
-  if (processor.value && mediaSource.value) {
-    try {
-      processor.value.disconnect();
-      mediaSource.value.disconnect();
-      isListening.value = false;
-      console.log('Speech recognition stopped');
-    } catch (err) {
-      console.log('Error stopping speech recognition:', err);
-    }
-  }
-};
-
-const wordCount = computed(() => {
-  return recognizedText.value.trim().split(/\s+/).filter(w => w.length > 0).length;
-});
-
-const charCount = computed(() => {
-  return recognizedText.value.length;
-});
 
 const startCamera = async () => {
   try {
@@ -328,18 +167,12 @@ const startRecording = () => {
   mediaRecorder.value.start();
   isRecording.value = true;
   showStatus('Recording started! 🎬', 'success', 2000);
-  
-  // Start speech recognition when video recording starts
-  startSpeechRecognition();
 };
 
 const stopRecording = () => {
   if (mediaRecorder.value && isRecording.value) {
     showStatus('Processing video...', 'info', 0);
     mediaRecorder.value.stop();
-    
-    // Stop speech recognition when video recording stops
-    stopSpeechRecognition();
   }
 };
 
@@ -350,10 +183,6 @@ const stopCamera = () => {
 };
 
 onMounted(async () => {
-  // Initialize Vosk on component mount (in background, don't block camera)
-  // This will only run once if the component is kept alive
-  initVosk();
-  
   // Start camera on initial mount
   await startCamera();
 });
@@ -370,9 +199,6 @@ onDeactivated(() => {
 
 onUnmounted(() => {
   stopCamera();
-  
-  // Clean up speech recognition
-  stopSpeechRecognition();
 });
 </script>
 
@@ -583,100 +409,6 @@ video {
 
 .btn-icon {
   font-size: 18px;
-}
-
-/* Speech Recognition Panel */
-.speech-recognition-panel {
-  width: 100%;
-  max-width: 640px;
-  background: white;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 16px;
-  margin-top: 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.speech-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.speech-header h3 {
-  margin: 0;
-  font-size: 16px;
-  color: #333;
-}
-
-.speech-status {
-  font-size: 12px;
-  color: #bbb;
-  font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 4px;
-  background: #f5f5f5;
-}
-
-.speech-status.listening {
-  color: #e74c3c;
-  background: rgba(231, 76, 60, 0.1);
-  animation: blink 1s infinite;
-}
-
-.speech-content {
-  background: #f9f9f9;
-  border-radius: 6px;
-  padding: 12px;
-  border: 1px solid transparent;
-  transition: all 0.3s;
-}
-
-.speech-content:focus-within {
-  background: #fff;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-.final-text-input {
-  width: 100%;
-  min-height: 80px;
-  max-height: 200px;
-  border: none;
-  background: transparent;
-  font-family: inherit;
-  font-size: 14px;
-  line-height: 1.6;
-  resize: vertical;
-  color: #333;
-  outline: none;
-  display: block;
-}
-
-.interim-text {
-  margin-top: 8px;
-  color: #666;
-  font-style: italic;
-  font-size: 13px;
-  border-top: 1px dashed #eee;
-  padding-top: 4px;
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-
-.speech-stats {
-  display: flex;
-  gap: 12px;
-  font-size: 12px;
-  color: #666;
-  justify-content: flex-end;
 }
 
 @media (max-width: 600px) {
