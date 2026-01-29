@@ -66,4 +66,17 @@ module.exports = {
       },
     },
   ],
+  publishers: [
+    {
+      name: '@electron-forge/publisher-github',
+      config: {
+        repository: {
+          owner: 'mali-i',
+          name: 'MirroSpeak'
+        },
+        prerelease: false,
+        draft: true
+      }
+    }
+  ]
 };

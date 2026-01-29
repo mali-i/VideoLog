@@ -16,6 +16,10 @@
     "name": "mali-i",
     "email": "hello_mali_i@163.com"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mali-i/MirroSpeak.git"
+  },
   "license": "MIT",
   "devDependencies": {
     "@electron-forge/cli": "^7.10.2",
@@ -27,6 +31,7 @@
     "@electron-forge/plugin-auto-unpack-natives": "^7.10.2",
     "@electron-forge/plugin-fuses": "^7.10.2",
     "@electron-forge/plugin-vite": "^7.10.2",
+    "@electron-forge/publisher-github": "^7.11.1",
     "@electron/fuses": "^1.8.0",
     "@tailwindcss/postcss": "^4.1.18",
     "@vitejs/plugin-vue": "^6.0.3",
