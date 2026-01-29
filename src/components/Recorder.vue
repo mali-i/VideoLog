@@ -193,8 +193,9 @@ const stopCamera = () => {
 
 onMounted(async () => {
   // Start camera on initial mount
+  // Note: startCamera is also called in onActivated which triggers on first mount
+  // so we don't need to call it here to avoid duplicate requests at startup.
   await loadFilenamePrefix();
-  await startCamera();
 });
 
 onActivated(async () => {

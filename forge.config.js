@@ -4,8 +4,8 @@ const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 module.exports = {
   packagerConfig: {
     asar: true,
-    executableName: 'video-log',
-    appBundleId: 'com.mali.videolog',
+    executableName: 'MirroSpeak',
+    appBundleId: 'cn.com.mirrospeak',
     extendInfo: {
       NSCameraUsageDescription: 'Application needs access to the camera for video recording.',
       NSMicrophoneUsageDescription: 'Application needs access to the microphone for audio recording.',

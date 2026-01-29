@@ -179,7 +179,7 @@ const startCamera = async () => {
 
     const constraints = {
       video: selectedVideoDeviceId.value ? { deviceId: { exact: selectedVideoDeviceId.value } } : true,
-      audio: false // No audio needed for preview in settings
+      audio: selectedAudioDeviceId.value ? { deviceId: { exact: selectedAudioDeviceId.value } } : true
     };
 
     stream.value = await navigator.mediaDevices.getUserMedia(constraints);
@@ -209,9 +209,11 @@ watch(selectedVideoDeviceId, () => {
 });
 
 onMounted(async () => {
+  // Start camera first to get permissions and show preview
+  // This avoids double permission requests in getDevices
+  await startCamera();
   await getDevices();
   navigator.mediaDevices.addEventListener('devicechange', getDevices);
-  await startCamera();
 });
 
 onUnmounted(() => {
