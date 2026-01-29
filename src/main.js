@@ -3,6 +3,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import url from 'node:url';
 import crypto from 'node:crypto';
+import { Readable } from 'node:stream';
 import Store from 'electron-store';
 import started from 'electron-squirrel-startup';
 
@@ -202,17 +203,59 @@ app.whenReady().then(async () => {
     }
   });
 
-  protocol.handle('media', (request) => {
+  protocol.handle('media', async (request) => {
+    let filePath;
     try {
       const parsedUrl = new URL(request.url);
       // For standard scheme, the absolute path will start from pathname
-      const filePath = decodeURIComponent(parsedUrl.pathname);
-      return net.fetch(url.pathToFileURL(filePath).toString());
+      filePath = decodeURIComponent(parsedUrl.pathname);
+    } catch (error) {
+      // Fallback for non-standard URLs if any
+      filePath = decodeURIComponent(request.url.slice('media://'.length));
+    }
+
+    try {
+      const stats = await fs.promises.stat(filePath);
+      const fileSize = stats.size;
+      const fileExt = path.extname(filePath).toLowerCase();
+      const mimeType = fileExt === '.webm' ? 'video/webm' : 'video/mp4';
+      
+      const range = request.headers.get('Range');
+      
+      if (range) {
+        const parts = range.replace(/bytes=/, "").split("-");
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+        const chunksize = (end - start) + 1;
+        
+        const fileStream = fs.createReadStream(filePath, { start, end });
+        // Convert Node stream to Web stream for Response
+        const readableWebStream = Readable.toWeb(fileStream);
+
+        return new Response(readableWebStream, {
+          status: 206,
+          headers: {
+            'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+            'Accept-Ranges': 'bytes',
+            'Content-Length': chunksize,
+            'Content-Type': mimeType
+          }
+        });
+      } else {
+        const fileStream = fs.createReadStream(filePath);
+        const readableWebStream = Readable.toWeb(fileStream);
+        
+        return new Response(readableWebStream, {
+          status: 200,
+          headers: {
+            'Content-Length': fileSize,
+            'Content-Type': mimeType
+          }
+        });
+      }
     } catch (error) {
       console.error('Media protocol error:', error);
-      // Fallback for non-standard URLs if any
-      const filePath = decodeURIComponent(request.url.slice('media://'.length));
-      return net.fetch(url.pathToFileURL(filePath).toString());
+      return new Response('File not found or access denied', { status: 404 });
     }
   });
 
