@@ -24,8 +24,10 @@
         <div class="modal-content">
             <video 
               :src="getVideoUrl(selectedVideo.path)" 
+              :poster="getThumbnailUrl(selectedVideo.path)"
               controls 
               autoplay
+              playsinline
               @error="handleVideoError"
             ></video>
             <div class="modal-footer">
