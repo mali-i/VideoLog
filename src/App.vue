@@ -138,18 +138,19 @@ body {
 
 .sidebar {
   width: 250px;
-  background: #2c3e50;
-  color: white;
+  background: #dfe0e1;
+  color: #2c3e50;
   display: flex;
   flex-direction: column;
   padding: 20px;
   flex-shrink: 0;
+  border-right: 1px solid #d1d5db;
 }
 
 .brand h1 {
     margin: 0 0 40px 0;
     font-size: 1.5rem;
-    color: white;
+    color: #2c3e50;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -168,7 +169,7 @@ body {
   padding: 12px 15px;
   background: transparent;
   border: none;
-  color: #a0aec0;
+  color: #64748b;
   text-align: left;
   font-size: 1rem;
   border-radius: 8px;
@@ -177,8 +178,8 @@ body {
 }
 
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+  background: #edf2f7;
+  color: #2d3748;
 }
 
 .nav-item.active {
