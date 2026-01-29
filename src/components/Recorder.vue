@@ -106,34 +106,12 @@ const initVosk = async () => {
     // Initialize Vosk with Chinese model
     const modelUrl = 'https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip';
     
-    // Manually fetch to show progress
-    const response = await fetch(modelUrl);
-    if (!response.ok) throw new Error(`Failed to download model: ${response.statusText}`);
-    
-    const contentLength = response.headers.get('content-length');
-    const total = contentLength ? parseInt(contentLength, 10) : 0;
-    let loaded = 0;
-    
-    const reader = response.body.getReader();
-    const chunks = [];
-    
-    while(true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      
-      chunks.push(value);
-      loaded += value.length;
-      
-      if (total) {
-        const progress = Math.round((loaded / total) * 100);
-        showStatus(`Downloading speech model: ${progress}%`, 'info', 0);
-      } else {
-        showStatus(`Downloading speech model: ${(loaded / 1024 / 1024).toFixed(1)} MB`, 'info', 0);
-      }
-    }
+    // Use IPC to fetch the model to bypass CORS restrictions when webSecurity is enabled
+    showStatus('Downloading speech model...', 'info', 0);
+    const buffer = await window.electronAPI.fetchVoskModel(modelUrl);
     
     showStatus('Unpacking model...', 'info', 0);
-    const blob = new Blob(chunks);
+    const blob = new Blob([buffer], { type: 'application/zip' });
     const blobUrl = URL.createObjectURL(blob);
     
     model.value = await createModel(blobUrl);

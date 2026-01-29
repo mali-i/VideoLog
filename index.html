@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <!-- Content Security Policy to allow local files and specific protocols -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: file: media: thumbnail: blob: https://alphacephei.com;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: thumbnail:; media-src 'self' media: blob:; connect-src 'self';">
     <!-- 测试模型加载失败时的逻辑 -->
     <!-- <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: file: media: thumbnail: "> -->
     <title>MirroSpeak</title>

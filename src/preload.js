@@ -9,4 +9,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setConfig: (key, value) => ipcRenderer.invoke('config:set', key, value),
   saveVideo: (data) => ipcRenderer.invoke('video:save', data),
   getVideos: (directory) => ipcRenderer.invoke('video:list', directory),
+  fetchVoskModel: (url) => ipcRenderer.invoke('vosk:fetch-model', url),
 });

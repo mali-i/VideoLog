@@ -63,18 +63,17 @@ const formatDate = (date) => {
 };
 
 const getThumbnailUrl = (path) => {
-  // Use simple file:// protocol for thumbnails
-  const encoded = encodeURIComponent(path);
-  return `thumbnail://${encoded}`;
+  // Use custom thumbnail:// protocol
+  return `thumbnail://local${path}`;
 };
 
 const getVideoUrl = (path) => {
-  // Convert to file:// URL for reliable playback
+  // Use custom media:// protocol for secure and reliable playback
+  // Using 'local' as a dummy host to ensure standard URL parsing works correctly
   try {
-    const fileUrl = new URL(`file://${path}`);
-    return fileUrl.href;
+    return `media://local${path}`;
   } catch (e) {
-    console.error('Failed to create file URL:', e);
+    console.error('Failed to create media URL:', e);
     return '';
   }
 };

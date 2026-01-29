@@ -16,6 +16,7 @@ protocol.registerSchemesAsPrivileged([
     scheme: 'media',
     privileges: {
       secure: true,
+      standard: true,
       supportFetchAPI: true,
       bypassCSP: true,
       stream: true
@@ -25,6 +26,7 @@ protocol.registerSchemesAsPrivileged([
     scheme: 'thumbnail',
     privileges: {
       secure: true,
+      standard: true,
       supportFetchAPI: true,
       bypassCSP: true
     }
@@ -40,7 +42,6 @@ const createWindow = () => {
     height: 800,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
-      webSecurity: false, // Allow access to local files
     },
   });
 
@@ -114,6 +115,18 @@ ipcMain.handle('video:list', async (event, directory) => {
   }
 });
 
+ipcMain.handle('vosk:fetch-model', async (event, url) => {
+  try {
+    const response = await net.fetch(url);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const arrayBuffer = await response.arrayBuffer();
+    return arrayBuffer;
+  } catch (error) {
+    console.error('Failed to fetch Vosk model:', error);
+    throw error;
+  }
+});
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -137,12 +150,13 @@ app.whenReady().then(async () => {
   }
 
   protocol.handle('thumbnail', async (request) => {
-    const decodedPath = decodeURIComponent(request.url.slice('thumbnail://'.length));
-    
-    const hash = crypto.createHash('md5').update(decodedPath).digest('hex');
-    const thumbPath = path.join(thumbnailsDir, `${hash}.jpg`);
-
     try {
+      const parsedUrl = new URL(request.url);
+      const decodedPath = decodeURIComponent(parsedUrl.pathname);
+      
+      const hash = crypto.createHash('md5').update(decodedPath).digest('hex');
+      const thumbPath = path.join(thumbnailsDir, `${hash}.jpg`);
+
       // Check if cached thumbnail exists
       try {
         await fs.promises.access(thumbPath);
@@ -189,8 +203,17 @@ app.whenReady().then(async () => {
   });
 
   protocol.handle('media', (request) => {
-    const filePath = decodeURIComponent(request.url.slice('media://'.length));
-    return net.fetch(url.pathToFileURL(filePath).toString());
+    try {
+      const parsedUrl = new URL(request.url);
+      // For standard scheme, the absolute path will start from pathname
+      const filePath = decodeURIComponent(parsedUrl.pathname);
+      return net.fetch(url.pathToFileURL(filePath).toString());
+    } catch (error) {
+      console.error('Media protocol error:', error);
+      // Fallback for non-standard URLs if any
+      const filePath = decodeURIComponent(request.url.slice('media://'.length));
+      return net.fetch(url.pathToFileURL(filePath).toString());
+    }
   });
 
   createWindow();
