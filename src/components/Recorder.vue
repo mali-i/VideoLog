@@ -8,7 +8,7 @@
       </div>
       
       <!-- Outline Panel -->
-      <OutlinePanel />
+      <!-- <OutlinePanel /> -->
     </div>
 
     <div class="controls">
@@ -55,7 +55,7 @@
 import { ref, onMounted, onUnmounted, onActivated, onDeactivated, computed, watch } from 'vue';
 import dayjs from 'dayjs';
 import { createModel } from 'vosk-browser';
-import OutlinePanel from './OutlinePanel.vue';
+// import OutlinePanel from './OutlinePanel.vue';
 
 const props = defineProps({
   saveDirectory: String
