@@ -1,7 +1,10 @@
 <template>
   <div class="gallery">
-    <h2>Recorded Videos</h2>
-    <div v-if="videos.length === 0" class="no-videos">No videos found in {{ directory }}</div>
+    <div class="gallery-info">
+      <span class="gallery-title">Recorded Videos</span>
+      <span class="gallery-path">{{ directory }}</span>
+    </div>
+    <div v-if="videos.length === 0" class="no-videos">No videos found.</div>
     <div class="video-grid">
       <div v-for="video in videos" :key="video.name" class="video-item" @click="playVideo(video)">
         <div class="video-thumbnail">
@@ -109,14 +112,33 @@ defineExpose({ refresh: loadVideos });
 
 <style scoped>
 .gallery {
-    margin-top: 40px;
     width: 100%;
 }
+
+.gallery-info {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.gallery-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.gallery-path {
+  font-size: 0.85rem;
+  color: #7f8c8d;
+  font-family: monospace;
+}
+
 .no-videos {
     color: #666;
     font-style: italic;
     text-align: center;
-    margin: 20px 0;
+    margin: 40px 0;
 }
 .video-grid {
     display: grid;

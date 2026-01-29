@@ -1,6 +1,34 @@
 <template>
   <div class="settings-page">
+    <!-- Storage Path Section -->
     <div class="settings-section">
+      <h3>Storage Location</h3>
+      <div class="selector-group">
+        <label>Current Path:</label>
+        <div class="path-row">
+          <div class="path-value">{{ saveDirectory || 'Not selected' }}</div>
+          <button @click="selectDirectory" class="btn-secondary">Change Folder</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- File Naming Section -->
+    <div class="settings-section mt-6">
+      <h3>File Naming</h3>
+      <div class="selector-group">
+        <label>Default Filename Prefix:</label>
+        <input 
+          v-model="defaultFilenamePrefix" 
+          @input="saveSettings" 
+          placeholder="e.g. video"
+          class="settings-input"
+        />
+        <p class="hint">Result: {{ defaultFilenamePrefix || 'video' }}_2026-01-29_12-00-00.mp4</p>
+      </div>
+    </div>
+
+    <!-- Device Settings Section -->
+    <div class="settings-section mt-6">
       <h3>Device Settings</h3>
       
       <div class="device-selectors">
@@ -47,15 +75,30 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 
+const props = defineProps({
+  saveDirectory: String
+});
+
+const emit = defineEmits(['update:saveDirectory']);
+
 const videoDevices = ref([]);
 const audioDevices = ref([]);
 const selectedVideoDeviceId = ref('');
 const selectedAudioDeviceId = ref('');
+const defaultFilenamePrefix = ref('video');
 const isRefreshingDevices = ref(false);
 const videoPreview = ref(null);
 const stream = ref(null);
 const statusMessage = ref('');
 const statusType = ref('');
+
+const selectDirectory = async () => {
+    const path = await window.electronAPI.selectDirectory();
+    if (path) {
+        emit('update:saveDirectory', path);
+        await window.electronAPI.setConfig('saveDirectory', path);
+    }
+};
 
 const showStatus = (message, type = 'info', duration = 3000) => {
   statusMessage.value = message;
@@ -112,6 +155,12 @@ const getDevices = async () => {
       selectedAudioDeviceId.value = audioDevices.value[0].deviceId;
     }
     
+    // Load filename prefix
+    const savedPrefix = await window.electronAPI.getConfig('defaultFilenamePrefix');
+    if (savedPrefix) {
+      defaultFilenamePrefix.value = savedPrefix;
+    }
+    
     saveSettings();
     showStatus(`Devices updated: ${videoDevices.value.length} cameras, ${audioDevices.value.length} microphones found`, 'success');
   } catch (err) {
@@ -149,6 +198,9 @@ const saveSettings = () => {
   if (selectedAudioDeviceId.value) {
     localStorage.setItem('selectedAudioDeviceId', selectedAudioDeviceId.value);
   }
+  if (defaultFilenamePrefix.value) {
+    window.electronAPI.setConfig('defaultFilenamePrefix', defaultFilenamePrefix.value);
+  }
 };
 
 watch(selectedVideoDeviceId, () => {
@@ -179,9 +231,54 @@ onUnmounted(() => {
 
 .settings-section {
   background: white;
-  padding: 20px;
+  padding: 24px;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.path-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.path-value {
+  flex: 1;
+  padding: 10px 14px;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 13px;
+  color: #495057;
+  word-break: break-all;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+}
+
+.btn-secondary {
+  padding: 0 16px;
+  height: 38px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  color: #444;
+  cursor: pointer;
+  font-size: 13.5px;
+  font-weight: 500;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-secondary:hover {
+  background: #f0f0f0;
+  border-color: #ccc;
+}
+
+.mt-6 {
+  margin-top: 1.5rem;
 }
 
 .device-selectors {
@@ -202,11 +299,23 @@ onUnmounted(() => {
   color: #666;
 }
 
-.selector-group select {
+.selector-group select, .settings-input {
   padding: 10px;
   border-radius: 6px;
   border: 1px solid #ddd;
   font-size: 14px;
+}
+
+.settings-input:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 2px rgba(74,144,226,0.1);
+}
+
+.hint {
+  font-size: 12px;
+  color: #888;
+  margin: 0;
 }
 
 .btn-refresh {

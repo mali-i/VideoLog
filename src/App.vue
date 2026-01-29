@@ -30,11 +30,11 @@
     </aside>
 
     <div class="main-wrapper">
-      <header class="top-bar">
+      <header class="top-bar" v-if="currentView === 'record'">
         <div class="view-title">
           <h2>{{ viewTitle }}</h2>
         </div>
-        <div class="settings">
+        <div class="settings" v-if="currentView !== 'settings'">
           <div class="path-display" :title="saveDirectory">
               <span class="label">Storage:</span>
               <span class="value">{{ saveDirectory || 'Not selected' }}</span>
@@ -43,7 +43,7 @@
         </div>
       </header>
       
-      <main class="content-area">
+      <main class="content-area" :class="{ 'no-top-bar': currentView !== 'record' }">
         <KeepAlive>
           <Recorder 
             v-if="currentView === 'record'" 
@@ -56,7 +56,10 @@
           <VideoGallery ref="galleryRef" :directory="saveDirectory" />
         </div>
         <div v-if="currentView === 'settings'" class="view-container">
-          <Settings />
+          <Settings 
+            :saveDirectory="saveDirectory" 
+            @update:saveDirectory="val => saveDirectory = val"
+          />
         </div>
       </main>
     </div>
@@ -222,7 +225,7 @@ body {
     display: flex;
     flex-direction: column;
     font-size: 0.85rem;
-    text-align: right;
+    text-align: left;
 }
 
 .path-display .label {

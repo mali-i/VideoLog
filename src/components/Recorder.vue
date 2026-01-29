@@ -52,10 +52,18 @@ const recordedChunks = ref([]);
 const isSaving = ref(false);
 const statusMessage = ref('');
 const statusType = ref('info');
+const filenamePrefix = ref('video');
 
 // Devices
 const selectedVideoDeviceId = ref('');
 const selectedAudioDeviceId = ref('');
+
+const loadFilenamePrefix = async () => {
+  const savedPrefix = await window.electronAPI.getConfig('defaultFilenamePrefix');
+  if (savedPrefix) {
+    filenamePrefix.value = savedPrefix;
+  }
+};
 
 const showStatus = (message, type = 'info', duration = 3000) => {
   statusMessage.value = message;
@@ -143,7 +151,8 @@ const startRecording = () => {
     try {
       const blob = new Blob(recordedChunks.value, { type: mimeType });
       const buffer = await blob.arrayBuffer();
-      const filename = `video_${dayjs().format('YYYY-MM-DD_HH-mm-ss')}.${fileExtension}`;
+      const prefix = filenamePrefix.value.trim() || 'video';
+      const filename = `${prefix}_${dayjs().format('YYYY-MM-DD_HH-mm-ss')}.${fileExtension}`;
       
       const result = await window.electronAPI.saveVideo({
         buffer,
@@ -184,11 +193,13 @@ const stopCamera = () => {
 
 onMounted(async () => {
   // Start camera on initial mount
+  await loadFilenamePrefix();
   await startCamera();
 });
 
 onActivated(async () => {
   // Restart camera when switching back to this tab
+  await loadFilenamePrefix();
   await startCamera();
 });
 
@@ -358,6 +369,13 @@ video {
     transform: translateX(-50%) translateY(0);
   }
 }
+.controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
 .controls button {
   padding: 12px 24px;
   font-size: 16px;
